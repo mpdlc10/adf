@@ -112,19 +112,6 @@
 											"referenceName": "SQLDB",
 											"type": "LinkedServiceReference"
 										}
-									},
-									{
-										"name": "Force error",
-										"type": "SetVariable",
-										"dependsOn": [],
-										"userProperties": [],
-										"typeProperties": {
-											"variableName": "simulateError",
-											"value": {
-												"value": "error",
-												"type": "Expression"
-											}
-										}
 									}
 								],
 								"ifTrueActivities": [
@@ -678,11 +665,6 @@
 			"ProcessName": {
 				"type": "string",
 				"defaultValue": "salesData"
-			}
-		},
-		"variables": {
-			"simulateError": {
-				"type": "Boolean"
 			}
 		},
 		"annotations": [],
