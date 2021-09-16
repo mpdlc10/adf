@@ -78,37 +78,6 @@
 							"isSequential": true,
 							"activities": [
 								{
-									"name": "DimProcedure",
-									"type": "SqlServerStoredProcedure",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "7.00:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"storedProcedureName": {
-											"value": "@item().ProcedureName",
-											"type": "Expression"
-										},
-										"storedProcedureParameters": {
-											"PipelineRunID": {
-												"value": {
-													"value": "@pipeline()?.TriggeredByPipelineRunId",
-													"type": "Expression"
-												}
-											}
-										}
-									},
-									"linkedServiceName": {
-										"referenceName": "SQLDB",
-										"type": "LinkedServiceReference"
-									}
-								},
-								{
 									"name": "Log ExecMessages_4",
 									"type": "SqlServerStoredProcedure",
 									"dependsOn": [
@@ -132,7 +101,7 @@
 										"storedProcedureParameters": {
 											"ExecMessage": {
 												"value": {
-													"value": "@{concat('Loading procedure execution: ', item().ProcedureName, '. Hierarchy level: ', item().Hierarchy)}\n",
+													"value": "@{concat('Loading procedure execution: ', item().ProcedureName, '. Hierarchy level: ', item().Hierarchy, '. Status: ', activity('DimProcedure').output.firstRow['ErrorMessage'])}\n",
 													"type": "Expression"
 												},
 												"type": "String"
@@ -156,6 +125,53 @@
 									"linkedServiceName": {
 										"referenceName": "SQLDB",
 										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "DimProcedure",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderStoredProcedureName": {
+												"value": "@item().ProcedureName",
+												"type": "Expression"
+											},
+											"storedProcedureParameters": {
+												"ExecutionID": {
+													"type": "Int32",
+													"value": {
+														"value": "@pipeline().parameters.ExecutionID",
+														"type": "Expression"
+													}
+												},
+												"PipelineRunID": {
+													"type": "String",
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "Metadata",
+											"type": "DatasetReference",
+											"parameters": {
+												"tableName": "dummy"
+											}
+										}
 									}
 								}
 							]
@@ -269,7 +285,7 @@
 											},
 											"PipelineRunID": {
 												"value": {
-													"value": "@pipeline()?.TriggeredByPipelineRunId",
+													"value": "@pipeline().RunId",
 													"type": "Expression"
 												},
 												"type": "String"
