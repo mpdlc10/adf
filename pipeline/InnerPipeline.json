@@ -54,56 +54,6 @@
 					"isSequential": true,
 					"activities": [
 						{
-							"name": "Log ExecMessages_4",
-							"type": "SqlServerStoredProcedure",
-							"dependsOn": [
-								{
-									"activity": "DimProcedure",
-									"dependencyConditions": [
-										"Succeeded"
-									]
-								}
-							],
-							"policy": {
-								"timeout": "7.00:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [],
-							"typeProperties": {
-								"storedProcedureName": "[lg].[Log_ExecMessages]",
-								"storedProcedureParameters": {
-									"ExecMessage": {
-										"value": {
-											"value": "@{concat('Loading procedure execution: ', item().ProcedureName, '. Hierarchy level: ', item().Hierarchy, '. Status: ', activity('DimProcedure').output.firstRow['ErrorMessage'])}\n",
-											"type": "Expression"
-										},
-										"type": "String"
-									},
-									"PipelineRunID": {
-										"value": {
-											"value": "@pipeline().RunId",
-											"type": "Expression"
-										},
-										"type": "String"
-									},
-									"ExecutionID": {
-										"value": {
-											"value": "@pipeline().parameters.ExecutionID",
-											"type": "Expression"
-										},
-										"type": "Int32"
-									}
-								}
-							},
-							"linkedServiceName": {
-								"referenceName": "SQLDB",
-								"type": "LinkedServiceReference"
-							}
-						},
-						{
 							"name": "DimProcedure",
 							"type": "Lookup",
 							"dependsOn": [],
@@ -148,6 +98,56 @@
 										"tableName": "dummy"
 									}
 								}
+							}
+						},
+						{
+							"name": "Log ExecMessages_4",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "DimProcedure",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[lg].[Log_ExecMessages]",
+								"storedProcedureParameters": {
+									"ExecMessage": {
+										"value": {
+											"value": "@{concat('Loading procedure execution: ', item().ProcedureName, '. Hierarchy level: ', item().Hierarchy, '. Status: ', activity('DimProcedure').output.firstRow['ErrorMessage'])}\n",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ExecutionID": {
+										"value": {
+											"value": "@pipeline().parameters.ExecutionID",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"PipelineRunID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SQLDB",
+								"type": "LinkedServiceReference"
 							}
 						}
 					]
