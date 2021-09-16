@@ -747,6 +747,25 @@
 						}
 					}
 				}
+			},
+			{
+				"name": "check if folder exists & copying succedded",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ForEachLanding",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('check if folder exists').output.exists, true)",
+						"type": "Expression"
+					}
+				}
 			}
 		],
 		"parameters": {
