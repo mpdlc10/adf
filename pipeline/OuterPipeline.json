@@ -475,49 +475,6 @@
 				}
 			},
 			{
-				"name": "Log ExecMessages_5_copy1",
-				"type": "SqlServerStoredProcedure",
-				"dependsOn": [],
-				"policy": {
-					"timeout": "7.00:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"storedProcedureName": "[lg].[Log_ExecMessages]",
-					"storedProcedureParameters": {
-						"ExecMessage": {
-							"value": {
-								"value": "@{concat('Fact tables hierarchy levels: ', activity('Lookup for FactHierarchy').output.count)}",
-								"type": "Expression"
-							},
-							"type": "String"
-						},
-						"PipelineRunID": {
-							"value": {
-								"value": "@pipeline().RunId",
-								"type": "Expression"
-							},
-							"type": "String"
-						},
-						"ExecutionID": {
-							"value": {
-								"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-								"type": "Expression"
-							},
-							"type": "Int32"
-						}
-					}
-				},
-				"linkedServiceName": {
-					"referenceName": "SQLDB",
-					"type": "LinkedServiceReference"
-				}
-			},
-			{
 				"name": "Lookup for Hierarchy",
 				"type": "Lookup",
 				"dependsOn": [
