@@ -1,0 +1,209 @@
+{
+	"name": "Main pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup for all processes",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT DISTINCT ProcessName FROM cfg.ProcessesData",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dummy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Is itemsCount greater than 0",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check if inserted ProcessName exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check if inserted ProcessName exists').output.FilteredItemsCount, 0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Log ExecMessages",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Log PipelineExecParam",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[lg].[Log_ExecMessages]",
+								"storedProcedureParameters": {
+									"ExecMessage": {
+										"value": {
+											"value": "@{concat('Invalid ProcessName. Inserted: ', pipeline().parameters.ProcessName)}",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"PipelineRunID": {
+										"value": {
+											"value": "@pipeline()?.TriggeredByPipelineRunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ExecutionID": {
+										"value": {
+											"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SQLDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Log PipelineExecParam",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[lg].[Log_PipelineExecParam]",
+									"storedProcedureParameters": {
+										"PipelineRunID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"ProcessName": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.ProcessName",
+												"type": "Expression"
+											}
+										},
+										"StartTime": {
+											"type": "DateTime",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Metadata",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "dummy"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "ETL",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OuterPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ProcessName": {
+										"value": "@pipeline().parameters.ProcessName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Check if inserted ProcessName exists",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Lookup for all processes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup for all processes').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().ProcessName, pipeline().parameters.ProcessName)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ProcessName": {
+				"type": "string",
+				"defaultValue": "salesData"
+			}
+		},
+		"annotations": []
+	}
+}
