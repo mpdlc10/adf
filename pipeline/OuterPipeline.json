@@ -21,142 +21,7 @@
 					},
 					"activities": [
 						{
-							"name": "Copy data1",
-							"type": "Copy",
-							"dependsOn": [],
-							"policy": {
-								"timeout": "7.00:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [],
-							"typeProperties": {
-								"source": {
-									"type": "DelimitedTextSource",
-									"additionalColumns": [
-										{
-											"name": "FileName",
-											"value": "$$FILEPATH"
-										},
-										{
-											"name": "TimeStamp",
-											"value": {
-												"value": "@utcnow()",
-												"type": "Expression"
-											}
-										}
-									],
-									"storeSettings": {
-										"type": "AzureBlobStorageReadSettings",
-										"recursive": true,
-										"wildcardFileName": "*",
-										"enablePartitionDiscovery": false
-									},
-									"formatSettings": {
-										"type": "DelimitedTextReadSettings"
-									}
-								},
-								"sink": {
-									"type": "AzureSqlSink",
-									"preCopyScript": {
-										"value": "@{concat('TRUNCATE TABLE ', item().LandingTableSchema, '.', item().LandingTableName)}",
-										"type": "Expression"
-									},
-									"disableMetricsCollection": false
-								},
-								"enableStaging": false,
-								"translator": {
-									"type": "TabularTranslator",
-									"typeConversion": true,
-									"typeConversionSettings": {
-										"allowDataTruncation": true,
-										"treatBooleanAsNumber": false
-									}
-								}
-							},
-							"inputs": [
-								{
-									"referenceName": "inputFile_gen",
-									"type": "DatasetReference",
-									"parameters": {
-										"folderName": {
-											"value": "@{item().SourcePath}",
-											"type": "Expression"
-										}
-									}
-								}
-							],
-							"outputs": [
-								{
-									"referenceName": "outputTable_gen",
-									"type": "DatasetReference",
-									"parameters": {
-										"tableName": {
-											"value": "@{item().LandingTableName}",
-											"type": "Expression"
-										},
-										"schemaName": {
-											"value": "@{item().LandingTableSchema}",
-											"type": "Expression"
-										}
-									}
-								}
-							]
-						},
-						{
-							"name": "Log ExecMessages_2",
-							"type": "SqlServerStoredProcedure",
-							"dependsOn": [
-								{
-									"activity": "Copy data1",
-									"dependencyConditions": [
-										"Succeeded"
-									]
-								}
-							],
-							"policy": {
-								"timeout": "7.00:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [],
-							"typeProperties": {
-								"storedProcedureName": "[lg].[Log_ExecMessages]",
-								"storedProcedureParameters": {
-									"ExecMessage": {
-										"value": {
-											"value": "@{concat('Data copied from foler ', item().SourcePath, ' to table ', item().LandingTableSchema, '.', item().LandingTableName, '. (filesRead: ', activity('Copy data1').output.filesRead, ', rowsRead: ', activity('Copy data1').output.rowsRead, ', rowsCopied: ', activity('Copy data1').output.rowsCopied, '. Errors: ', activity('Copy data1').output.errors, ')')}",
-											"type": "Expression"
-										},
-										"type": "String"
-									},
-									"PipelineRunID": {
-										"value": {
-											"value": "@pipeline().RunId",
-											"type": "Expression"
-										},
-										"type": "String"
-									},
-									"ExecutionID": {
-										"value": {
-											"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-											"type": "Expression"
-										},
-										"type": "Int32"
-									}
-								}
-							},
-							"linkedServiceName": {
-								"referenceName": "SQLDB",
-								"type": "LinkedServiceReference"
-							}
-						},
-						{
-							"name": "Get Metadata1",
+							"name": "check if folder exists",
 							"type": "GetMetadata",
 							"dependsOn": [],
 							"policy": {
@@ -188,6 +53,204 @@
 								"formatSettings": {
 									"type": "DelimitedTextReadSettings"
 								}
+							}
+						},
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "check if folder exists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('check if folder exists').output['exists'], true)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Log ExecMessages_copy1",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[lg].[Log_ExecMessages]",
+											"storedProcedureParameters": {
+												"ExecMessage": {
+													"value": "Invalid folder name",
+													"type": "String"
+												},
+												"PipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"ExecutionID": {
+													"value": {
+														"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "SQLDB",
+											"type": "LinkedServiceReference"
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Copy data1",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"additionalColumns": [
+													{
+														"name": "FileName",
+														"value": "$$FILEPATH"
+													},
+													{
+														"name": "TimeStamp",
+														"value": {
+															"value": "@utcnow()",
+															"type": "Expression"
+														}
+													}
+												],
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFileName": "*",
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "AzureSqlSink",
+												"preCopyScript": {
+													"value": "@{concat('TRUNCATE TABLE ', item().LandingTableSchema, '.', item().LandingTableName)}",
+													"type": "Expression"
+												},
+												"disableMetricsCollection": false
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "inputFile_gen",
+												"type": "DatasetReference",
+												"parameters": {
+													"folderName": {
+														"value": "@{item().SourcePath}",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "outputTable_gen",
+												"type": "DatasetReference",
+												"parameters": {
+													"tableName": {
+														"value": "@{item().LandingTableName}",
+														"type": "Expression"
+													},
+													"schemaName": {
+														"value": "@{item().LandingTableSchema}",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Log ExecMessages_2",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Copy data1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[lg].[Log_ExecMessages]",
+											"storedProcedureParameters": {
+												"ExecMessage": {
+													"value": {
+														"value": "@{concat('Data copied from foler ', item().SourcePath, ' to table ', item().LandingTableSchema, '.', item().LandingTableName, '. (filesRead: ', activity('Copy data1').output.filesRead, ', rowsRead: ', activity('Copy data1').output.rowsRead, ', rowsCopied: ', activity('Copy data1').output.rowsCopied, '. Errors: ', activity('Copy data1').output.errors, ')')}",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"PipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"ExecutionID": {
+													"value": {
+														"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "SQLDB",
+											"type": "LinkedServiceReference"
+										}
+									}
+								]
 							}
 						}
 					]
