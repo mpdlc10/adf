@@ -1,0 +1,9 @@
+{
+	"name": "mpadf1",
+	"location": "westeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "aab10572-103b-436d-bcef-7db7cbf86247",
+		"tenantId": "2ee548e1-6be8-4729-b86e-f482e29d2c9f"
+	}
+}
