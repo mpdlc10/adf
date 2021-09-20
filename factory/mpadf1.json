@@ -3,7 +3,7 @@
 	"location": "westeurope",
 	"identity": {
 		"type": "SystemAssigned",
-		"principalId": "a1a7fadd-9eaf-46f7-8394-578aced7d5e4",
+		"principalId": "24160a47-39ee-4460-9ee4-6a11398c0b2b",
 		"tenantId": "2ee548e1-6be8-4729-b86e-f482e29d2c9f"
 	}
 }
