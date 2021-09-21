@@ -202,6 +202,69 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "If error occured",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check if error occured",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Check if error occured').output.firstRow['ErrorFlag'], 1)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Check if error occured",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "ForEachDim",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[lg].[checkForErrors]",
+						"storedProcedureParameters": {
+							"ExecutionID": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.ExecutionID",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dummy"
+						}
+					}
+				}
 			}
 		],
 		"parameters": {
