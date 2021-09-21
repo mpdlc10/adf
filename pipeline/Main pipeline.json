@@ -17,7 +17,10 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderQuery": "SELECT DISTINCT ProcessName FROM cfg.ProcessesData",
+						"sqlReaderQuery": {
+							"value": "@{concat('SELECT DISTINCT ProcessName FROM cfg.ProcessesData WHERE ProcessName =''', pipeline().parameters.ProcessName, '''')}",
+							"type": "Expression"
+						},
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -36,7 +39,7 @@
 				"type": "IfCondition",
 				"dependsOn": [
 					{
-						"activity": "Check if inserted ProcessName exists",
+						"activity": "Lookup for all processes",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -45,7 +48,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@greater(activity('Check if inserted ProcessName exists').output.FilteredItemsCount, 0)",
+						"value": "@greater(activity('Lookup for all processes').output.count, 0)",
 						"type": "Expression"
 					},
 					"ifFalseActivities": [
@@ -172,29 +175,6 @@
 							}
 						}
 					]
-				}
-			},
-			{
-				"name": "Check if inserted ProcessName exists",
-				"type": "Filter",
-				"dependsOn": [
-					{
-						"activity": "Lookup for all processes",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"userProperties": [],
-				"typeProperties": {
-					"items": {
-						"value": "@activity('Lookup for all processes').output.value",
-						"type": "Expression"
-					},
-					"condition": {
-						"value": "@equals(item().ProcessName, pipeline().parameters.ProcessName)",
-						"type": "Expression"
-					}
 				}
 			}
 		],
