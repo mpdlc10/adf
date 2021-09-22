@@ -274,7 +274,7 @@
 							"type": "Lookup",
 							"dependsOn": [
 								{
-									"activity": "DimProcedure",
+									"activity": "Log ExecMessages_4",
 									"dependencyConditions": [
 										"Succeeded"
 									]
