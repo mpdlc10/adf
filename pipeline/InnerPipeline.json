@@ -151,56 +151,6 @@
 							}
 						},
 						{
-							"name": "Log ExecMessages_4A",
-							"type": "SqlServerStoredProcedure",
-							"dependsOn": [
-								{
-									"activity": "If error occured",
-									"dependencyConditions": [
-										"Failed"
-									]
-								}
-							],
-							"policy": {
-								"timeout": "7.00:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [],
-							"typeProperties": {
-								"storedProcedureName": "[lg].[Log_ExecMessages]",
-								"storedProcedureParameters": {
-									"ExecMessage": {
-										"value": {
-											"value": "@{activity('DimProcedure').error.message}",
-											"type": "Expression"
-										},
-										"type": "String"
-									},
-									"ExecutionID": {
-										"value": {
-											"value": "@pipeline().parameters.ExecutionID",
-											"type": "Expression"
-										},
-										"type": "Int32"
-									},
-									"PipelineRunID": {
-										"value": {
-											"value": "@pipeline().RunId",
-											"type": "Expression"
-										},
-										"type": "String"
-									}
-								}
-							},
-							"linkedServiceName": {
-								"referenceName": "SQLDB",
-								"type": "LinkedServiceReference"
-							}
-						},
-						{
 							"name": "If error occured",
 							"type": "IfCondition",
 							"dependsOn": [
@@ -247,6 +197,73 @@
 													"tableName": "dummy"
 												}
 											}
+										}
+									},
+									{
+										"name": "Log ExecMessages_4A",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Force error",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[lg].[Log_ExecMessages]",
+											"storedProcedureParameters": {
+												"ExecMessage": {
+													"value": {
+														"value": "@activity('Force error').error.message",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"ExecutionID": {
+													"value": {
+														"value": "@pipeline().parameters.ExecutionID",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"PipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "SQLDB",
+											"type": "LinkedServiceReference"
+										}
+									},
+									{
+										"name": "Force failure of pipeline",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Force error",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "error",
+											"value": "0"
 										}
 									}
 								]
@@ -309,6 +326,11 @@
 			},
 			"ExecutionID": {
 				"type": "int"
+			}
+		},
+		"variables": {
+			"error": {
+				"type": "Boolean"
 			}
 		},
 		"annotations": [],
