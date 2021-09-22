@@ -142,6 +142,10 @@
 											"type": "Expression"
 										},
 										"type": "String"
+									},
+									"ErrorID": {
+										"value": null,
+										"type": "Int32"
 									}
 								}
 							},
