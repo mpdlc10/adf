@@ -144,7 +144,10 @@
 										"type": "String"
 									},
 									"ErrorID": {
-										"value": null,
+										"value": {
+											"value": "@activity('DimProcedure').output.firstRow['ErrorID']",
+											"type": "Expression"
+										},
 										"type": "Int32"
 									}
 								}
