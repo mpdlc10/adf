@@ -155,7 +155,7 @@
 							"type": "SqlServerStoredProcedure",
 							"dependsOn": [
 								{
-									"activity": "DimProcedure",
+									"activity": "If error occured",
 									"dependencyConditions": [
 										"Failed"
 									]
