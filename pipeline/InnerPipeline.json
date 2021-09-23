@@ -203,7 +203,7 @@
 										"userProperties": [],
 										"typeProperties": {
 											"url": {
-												"value": "@concat('https://management.azure.com/subscriptions/2bcb9f3d-3f6b-4a90-a49e-86d3141c7f73/resourceGroups/Lingaro_magdalenapietras_2109230704_e684b/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/pipelineruns/',pipeline().RunId,'/cancel?api-version=2018-06-01')",
+												"value": "@variables('PipelineRunId')",
 												"type": "Expression"
 											},
 											"method": "POST",
@@ -274,42 +274,8 @@
 				"typeProperties": {
 					"variableName": "PipelineRunId",
 					"value": {
-						"value": "@concat('https://management.azure.com/subscriptions/2bcb9f3d-3f6b-4a90-a49e-86d3141c7f73/resourceGroups/Lingaro_magdalenapietras_2109230704_e684b/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/pipelineruns/',pipeline().parameters.OuterPipelineRunId,'/cancel?api-version=2018-06-01')",
+						"value": "@concat('https://management.azure.com/subscriptions/2bcb9f3d-3f6b-4a90-a49e-86d3141c7f73/resourceGroups/Lingaro_magdalenapietras_2109230704_e684b/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/pipelineruns/',pipeline().RunId,'/cancel?api-version=2018-06-01')",
 						"type": "Expression"
-					}
-				}
-			},
-			{
-				"name": "Break_copy1",
-				"type": "WebActivity",
-				"dependsOn": [
-					{
-						"activity": "ForEachDim",
-						"dependencyConditions": [
-							"Failed"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "7.00:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"url": {
-						"value": "@variables('PipelineRunId')",
-						"type": "Expression"
-					},
-					"method": "POST",
-					"body": {
-						"message": "Cancelling the pipeline"
-					},
-					"authentication": {
-						"type": "MSI",
-						"resource": "https://management.azure.com"
 					}
 				}
 			}
