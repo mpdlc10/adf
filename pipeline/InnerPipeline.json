@@ -289,9 +289,6 @@
 			},
 			"ExecutionID": {
 				"type": "int"
-			},
-			"OuterPipelineRunId": {
-				"type": "string"
 			}
 		},
 		"variables": {

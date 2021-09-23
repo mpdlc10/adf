@@ -677,10 +677,6 @@
 									"ExecutionID": {
 										"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
 										"type": "Expression"
-									},
-									"OuterPipelineRunId": {
-										"value": "@variables('PipelineRunId')",
-										"type": "Expression"
 									}
 								}
 							}
