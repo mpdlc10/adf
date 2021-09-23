@@ -154,7 +154,14 @@
 					{
 						"name": "Lookup for dim or fact",
 						"type": "Lookup",
-						"dependsOn": [],
+						"dependsOn": [
+							{
+								"activity": "Set PipelineRunId",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
 						"policy": {
 							"timeout": "7.00:00:00",
 							"retry": 0,
@@ -291,6 +298,20 @@
 													"type": "Expression"
 												},
 												"type": "String"
+											},
+											"ErrorID": {
+												"value": {
+													"value": "@activity('DimProcedure').output.firstRow['ErrorID']",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"TableLoad_ID": {
+												"value": {
+													"value": "@{concat(activity('DimProcedure').output.firstRow['TableLoad_ID'])}",
+													"type": "Expression"
+												},
+												"type": "Int32"
 											}
 										}
 									},
@@ -300,13 +321,62 @@
 									}
 								},
 								{
-									"name": "Log ExecMessages_4A",
-									"type": "SqlServerStoredProcedure",
+									"name": "If error occured",
+									"type": "IfCondition",
 									"dependsOn": [
 										{
-											"activity": "DimProcedure",
+											"activity": "Check if error occured",
 											"dependencyConditions": [
-												"Failed"
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@equals(activity('Check if error occured').output.firstRow['ErrorFlag'], 1)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Break",
+												"type": "WebActivity",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"url": {
+														"value": "@variables('PipelineRunId')",
+														"type": "Expression"
+													},
+													"method": "POST",
+													"headers": {},
+													"body": {
+														"message": "Cancelling the pipeline"
+													},
+													"authentication": {
+														"type": "MSI",
+														"resource": "https://management.azure.com"
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "Check if error occured",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "Log ExecMessages_4",
+											"dependencyConditions": [
+												"Succeeded"
 											]
 										}
 									],
@@ -319,37 +389,44 @@
 									},
 									"userProperties": [],
 									"typeProperties": {
-										"storedProcedureName": "[[lg].[Log_ExecMessages]",
-										"storedProcedureParameters": {
-											"ExecMessage": {
-												"value": {
-													"value": "@{activity('DimProcedure').error.message}",
-													"type": "Expression"
-												},
-												"type": "String"
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderStoredProcedureName": "[[lg].[checkForErrors]",
+											"storedProcedureParameters": {
+												"ExecutionID": {
+													"type": "Int32",
+													"value": {
+														"value": "@pipeline().parameters.ExecutionID",
+														"type": "Expression"
+													}
+												}
 											},
-											"ExecutionID": {
-												"value": {
-													"value": "@pipeline().parameters.ExecutionID",
-													"type": "Expression"
-												},
-												"type": "Int32"
-											},
-											"PipelineRunID": {
-												"value": {
-													"value": "@pipeline().RunId",
-													"type": "Expression"
-												},
-												"type": "String"
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "Metadata",
+											"type": "DatasetReference",
+											"parameters": {
+												"tableName": "dummy"
 											}
 										}
-									},
-									"linkedServiceName": {
-										"referenceName": "SQLDB",
-										"type": "LinkedServiceReference"
 									}
 								}
 							]
+						}
+					},
+					{
+						"name": "Set PipelineRunId",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "PipelineRunId",
+							"value": {
+								"value": "@concat('https://management.azure.com/subscriptions/2bcb9f3d-3f6b-4a90-a49e-86d3141c7f73/resourceGroups/Lingaro_magdalenapietras_2109230704_e684b/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/pipelineruns/',pipeline().RunId,'/cancel?api-version=2018-06-01')",
+								"type": "Expression"
+							}
 						}
 					}
 				],
@@ -366,6 +443,11 @@
 					},
 					"ExecutionID": {
 						"type": "int"
+					}
+				},
+				"variables": {
+					"PipelineRunId": {
+						"type": "String"
 					}
 				},
 				"annotations": [],
@@ -401,8 +483,8 @@
 							},
 							"activities": [
 								{
-									"name": "Copy data1",
-									"type": "Copy",
+									"name": "check if folder exists",
+									"type": "GetMetadata",
 									"dependsOn": [],
 									"policy": {
 										"timeout": "7.00:00:00",
@@ -413,126 +495,276 @@
 									},
 									"userProperties": [],
 									"typeProperties": {
-										"source": {
-											"type": "DelimitedTextSource",
-											"additionalColumns": [
-												{
-													"name": "FileName",
-													"value": "$$FILEPATH"
-												},
-												{
-													"name": "TimeStamp",
-													"value": {
-														"value": "@utcnow()",
-														"type": "Expression"
-													}
-												}
-											],
-											"storeSettings": {
-												"type": "AzureBlobStorageReadSettings",
-												"recursive": true,
-												"wildcardFileName": "*",
-												"enablePartitionDiscovery": false
-											},
-											"formatSettings": {
-												"type": "DelimitedTextReadSettings"
-											}
-										},
-										"sink": {
-											"type": "AzureSqlSink",
-											"preCopyScript": {
-												"value": "@{concat('TRUNCATE TABLE ', item().LandingTableSchema, '.', item().LandingTableName)}",
-												"type": "Expression"
-											},
-											"disableMetricsCollection": false
-										},
-										"enableStaging": false,
-										"translator": {
-											"type": "TabularTranslator",
-											"typeConversion": true,
-											"typeConversionSettings": {
-												"allowDataTruncation": true,
-												"treatBooleanAsNumber": false
-											}
-										}
-									},
-									"inputs": [
-										{
+										"dataset": {
 											"referenceName": "inputFile_gen",
 											"type": "DatasetReference",
 											"parameters": {
 												"folderName": {
-													"value": "@{item().SourcePath}",
+													"value": "@item().SourcePath",
 													"type": "Expression"
 												}
 											}
+										},
+										"fieldList": [
+											"exists"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
 										}
-									],
-									"outputs": [
-										{
-											"referenceName": "outputTable_gen",
-											"type": "DatasetReference",
-											"parameters": {
-												"tableName": {
-													"value": "@{item().LandingTableName}",
-													"type": "Expression"
-												},
-												"schemaName": {
-													"value": "@{item().LandingTableSchema}",
-													"type": "Expression"
-												}
-											}
-										}
-									]
+									}
 								},
 								{
-									"name": "Log ExecMessages_2",
-									"type": "SqlServerStoredProcedure",
+									"name": "If Condition1",
+									"type": "IfCondition",
 									"dependsOn": [
 										{
-											"activity": "Copy data1",
+											"activity": "check if folder exists",
 											"dependencyConditions": [
 												"Succeeded"
 											]
 										}
 									],
-									"policy": {
-										"timeout": "7.00:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
 									"userProperties": [],
 									"typeProperties": {
-										"storedProcedureName": "[[lg].[Log_ExecMessages]",
-										"storedProcedureParameters": {
-											"ExecMessage": {
-												"value": {
-													"value": "@{concat('Data copied from foler ', item().SourcePath, ' to table ', item().LandingTableSchema, '.', item().LandingTableName, '. (filesRead: ', activity('Copy data1').output.filesRead, ', rowsRead: ', activity('Copy data1').output.rowsRead, ', rowsCopied: ', activity('Copy data1').output.rowsCopied, '. Errors: ', activity('Copy data1').output.errors, ')')}",
-													"type": "Expression"
+										"expression": {
+											"value": "@equals(activity('check if folder exists').output['exists'], true)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Log ExecMessages_copy1",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
 												},
-												"type": "String"
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[[lg].[Log_ExecMessages]",
+													"storedProcedureParameters": {
+														"ExecMessage": {
+															"value": "Invalid folder name",
+															"type": "String"
+														},
+														"PipelineRunID": {
+															"value": {
+																"value": "@pipeline().RunId",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"ExecutionID": {
+															"value": {
+																"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														},
+														"ErrorID": {
+															"value": null,
+															"type": "Int32"
+														},
+														"TableLoad_ID": {
+															"value": null,
+															"type": "Int32"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "SQLDB",
+													"type": "LinkedServiceReference"
+												}
 											},
-											"PipelineRunID": {
-												"value": {
-													"value": "@pipeline().RunId",
-													"type": "Expression"
+											{
+												"name": "Lookup1",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Log ExecMessages_copy1",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
 												},
-												"type": "String"
-											},
-											"ExecutionID": {
-												"value": {
-													"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-													"type": "Expression"
-												},
-												"type": "Int32"
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": "SELECT 1 FROM NonExistingTable",
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Metadata",
+														"type": "DatasetReference",
+														"parameters": {
+															"tableName": "dummy"
+														}
+													}
+												}
 											}
-										}
-									},
-									"linkedServiceName": {
-										"referenceName": "SQLDB",
-										"type": "LinkedServiceReference"
+										],
+										"ifTrueActivities": [
+											{
+												"name": "Copy data1",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"additionalColumns": [
+															{
+																"name": "FileName",
+																"value": "$$FILEPATH"
+															},
+															{
+																"name": "TimeStamp",
+																"value": {
+																	"value": "@utcnow()",
+																	"type": "Expression"
+																}
+															}
+														],
+														"storeSettings": {
+															"type": "AzureBlobStorageReadSettings",
+															"recursive": true,
+															"wildcardFileName": "*",
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "@{concat('TRUNCATE TABLE ', item().LandingTableSchema, '.', item().LandingTableName)}",
+															"type": "Expression"
+														},
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "inputFile_gen",
+														"type": "DatasetReference",
+														"parameters": {
+															"folderName": {
+																"value": "@{item().SourcePath}",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "outputTable_gen",
+														"type": "DatasetReference",
+														"parameters": {
+															"tableName": {
+																"value": "@{item().LandingTableName}",
+																"type": "Expression"
+															},
+															"schemaName": {
+																"value": "@{item().LandingTableSchema}",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											},
+											{
+												"name": "Log ExecMessages_2",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "Copy data1",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[[lg].[Log_ExecMessages]",
+													"storedProcedureParameters": {
+														"ExecMessage": {
+															"value": {
+																"value": "@{concat('Data copied from foler ', item().SourcePath, ' to table ', item().LandingTableSchema, '.', item().LandingTableName, '. (filesRead: ', activity('Copy data1').output.filesRead, ', rowsRead: ', activity('Copy data1').output.rowsRead, ', rowsCopied: ', activity('Copy data1').output.rowsCopied, '. Errors: ', activity('Copy data1').output.errors, ')')}",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"PipelineRunID": {
+															"value": {
+																"value": "@pipeline().RunId",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"ExecutionID": {
+															"value": {
+																"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														},
+														"ErrorID": {
+															"value": null,
+															"type": "Int32"
+														},
+														"TableLoad_ID": {
+															"value": null,
+															"type": "Int32"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "SQLDB",
+													"type": "LinkedServiceReference"
+												}
+											}
+										]
 									}
 								}
 							]
@@ -579,6 +811,14 @@
 										"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
 										"type": "Expression"
 									},
+									"type": "Int32"
+								},
+								"ErrorID": {
+									"value": null,
+									"type": "Int32"
+								},
+								"TableLoad_ID": {
+									"value": null,
 									"type": "Int32"
 								}
 							}
@@ -679,50 +919,6 @@
 						}
 					},
 					{
-						"name": "Check if error occured",
-						"type": "Lookup",
-						"dependsOn": [
-							{
-								"activity": "ForEachLanding",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderStoredProcedureName": "[[lg].[checkForErrors]",
-								"storedProcedureParameters": {
-									"ExecutionID": {
-										"type": "Int32",
-										"value": {
-											"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-											"type": "Expression"
-										}
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "Metadata",
-								"type": "DatasetReference",
-								"parameters": {
-									"tableName": "dummy"
-								}
-							}
-						}
-					},
-					{
 						"name": "Lookup for FactHierarchy",
 						"type": "Lookup",
 						"dependsOn": [
@@ -744,7 +940,10 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "SELECT DISTINCT Hierarchy FROM cfg.ProceduresList WHERE TableType = 'Fact'",
+								"sqlReaderQuery": {
+									"value": "@{concat('SELECT DISTINCT Hierarchy FROM cfg.ProceduresList prcd JOIN cfg.ProcessesData prcs ON prcd.ProcessId = prcs.ProcessId WHERE ProcessName = ''', pipeline().parameters.ProcessName, ''' AND TableType = ''Fact'' ORDER BY Hierarchy')}",
+									"type": "Expression"
+								},
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
@@ -846,6 +1045,14 @@
 										"type": "Expression"
 									},
 									"type": "Int32"
+								},
+								"ErrorID": {
+									"value": null,
+									"type": "Int32"
+								},
+								"TableLoad_ID": {
+									"value": null,
+									"type": "Int32"
 								}
 							}
 						},
@@ -876,7 +1083,10 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "SELECT DISTINCT Hierarchy FROM cfg.ProceduresList WHERE TableType = 'Dimension' ORDER BY Hierarchy",
+								"sqlReaderQuery": {
+									"value": "@{concat('SELECT DISTINCT Hierarchy FROM cfg.ProceduresList prcd JOIN cfg.ProcessesData prcs ON prcd.ProcessId = prcs.ProcessId WHERE ProcessName = ''', pipeline().parameters.ProcessName, ''' AND TableType = ''Dimension'' ORDER BY Hierarchy')}",
+									"type": "Expression"
+								},
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
@@ -978,6 +1188,14 @@
 										"type": "Expression"
 									},
 									"type": "Int32"
+								},
+								"ErrorID": {
+									"value": null,
+									"type": "Int32"
+								},
+								"TableLoad_ID": {
+									"value": null,
+									"type": "Int32"
 								}
 							}
 						},
@@ -987,13 +1205,13 @@
 						}
 					},
 					{
-						"name": "Check if error occured_2",
-						"type": "Lookup",
+						"name": "Log DimError",
+						"type": "SqlServerStoredProcedure",
 						"dependsOn": [
 							{
 								"activity": "ForEachDim",
 								"dependencyConditions": [
-									"Succeeded"
+									"Failed"
 								]
 							}
 						],
@@ -1006,28 +1224,90 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderStoredProcedureName": "[[lg].[checkForErrors]",
-								"storedProcedureParameters": {
-									"ExecutionID": {
-										"type": "Int32",
-										"value": {
-											"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-											"type": "Expression"
-										}
-									}
+							"storedProcedureName": "[[lg].[Log_ExecMessages]",
+							"storedProcedureParameters": {
+								"ExecMessage": {
+									"value": "Error during loading dimension tables. Pipeline stopped.",
+									"type": "String"
 								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "Metadata",
-								"type": "DatasetReference",
-								"parameters": {
-									"tableName": "dummy"
+								"PipelineRunID": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"ExecutionID": {
+									"value": {
+										"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+										"type": "Expression"
+									},
+									"type": "Int32"
+								},
+								"ErrorID": {
+									"value": null,
+									"type": "Int32"
+								},
+								"TableLoad_ID": {
+									"value": null,
+									"type": "Int32"
 								}
 							}
+						},
+						"linkedServiceName": {
+							"referenceName": "SQLDB",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Log FactError",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "ForEachFact",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[lg].[Log_ExecMessages]",
+							"storedProcedureParameters": {
+								"ExecMessage": {
+									"value": "Error during loading fact tables. Pipeline stopped.",
+									"type": "String"
+								},
+								"PipelineRunID": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"ExecutionID": {
+									"value": {
+										"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+										"type": "Expression"
+									},
+									"type": "Int32"
+								},
+								"ErrorID": {
+									"value": null,
+									"type": "Int32"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "SQLDB",
+							"type": "LinkedServiceReference"
 						}
 					}
 				],
@@ -1041,11 +1321,6 @@
 						"defaultValue": "salesData"
 					}
 				},
-				"variables": {
-					"output": {
-						"type": "String"
-					}
-				},
 				"annotations": [],
 				"lastPublishTime": "2021-09-14T09:17:37Z"
 			},
@@ -1053,8 +1328,8 @@
 				"[concat(variables('factoryId'), '/linkedServices/SQLDB')]",
 				"[concat(variables('factoryId'), '/datasets/Metadata')]",
 				"[concat(variables('factoryId'), '/datasets/inputFile_gen')]",
-				"[concat(variables('factoryId'), '/datasets/outputTable_gen')]",
-				"[concat(variables('factoryId'), '/pipelines/InnerPipeline')]"
+				"[concat(variables('factoryId'), '/pipelines/InnerPipeline')]",
+				"[concat(variables('factoryId'), '/datasets/outputTable_gen')]"
 			]
 		},
 		{
@@ -1078,7 +1353,10 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "SELECT DISTINCT ProcessName FROM cfg.ProcessesData",
+								"sqlReaderQuery": {
+									"value": "@{concat('SELECT DISTINCT ProcessName FROM cfg.ProcessesData WHERE ProcessName =''', pipeline().parameters.ProcessName, '''')}",
+									"type": "Expression"
+								},
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
@@ -1097,7 +1375,7 @@
 						"type": "IfCondition",
 						"dependsOn": [
 							{
-								"activity": "Check if inserted ProcessName exists",
+								"activity": "Lookup for all processes",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -1106,7 +1384,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"expression": {
-								"value": "@greater(activity('Check if inserted ProcessName exists').output.FilteredItemsCount, 0)",
+								"value": "@greater(activity('Lookup for all processes').output.count, 0)",
 								"type": "Expression"
 							},
 							"ifFalseActivities": [
@@ -1151,6 +1429,10 @@
 													"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
 													"type": "Expression"
 												},
+												"type": "Int32"
+											},
+											"ErrorID": {
+												"value": null,
 												"type": "Int32"
 											}
 										}
@@ -1233,29 +1515,6 @@
 									}
 								}
 							]
-						}
-					},
-					{
-						"name": "Check if inserted ProcessName exists",
-						"type": "Filter",
-						"dependsOn": [
-							{
-								"activity": "Lookup for all processes",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@activity('Lookup for all processes').output.value",
-								"type": "Expression"
-							},
-							"condition": {
-								"value": "@equals(item().ProcessName, pipeline().parameters.ProcessName)",
-								"type": "Expression"
-							}
 						}
 					}
 				],

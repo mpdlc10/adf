@@ -6,14 +6,6 @@
 			"type": "string",
 			"metadata": "Data Factory name",
 			"defaultValue": "mpadf1"
-		},
-		"SQLDB_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'SQLDB'"
-		},
-		"inputBlob_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'inputBlob'"
 		}
 	},
 	"variables": {
@@ -231,7 +223,6 @@
 														"type": "Expression"
 													},
 													"method": "POST",
-													"headers": {},
 													"body": {
 														"message": "Cancelling the pipeline"
 													},
@@ -305,10 +296,6 @@
 						}
 					}
 				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
 				"parameters": {
 					"hierarchyNr": {
 						"type": "string"
@@ -329,8 +316,7 @@
 				"lastPublishTime": "2021-09-14T07:12:41Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/Metadata')]",
-				"[concat(variables('factoryId'), '/linkedServices/SQLDB')]"
+				"[concat(variables('factoryId'), '/datasets/Metadata')]"
 			]
 		},
 		{
@@ -519,10 +505,6 @@
 						}
 					}
 				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
 				"parameters": {
 					"ProcessName": {
 						"type": "string",
@@ -533,7 +515,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metadata')]",
-				"[concat(variables('factoryId'), '/linkedServices/SQLDB')]",
 				"[concat(variables('factoryId'), '/pipelines/OuterPipeline')]"
 			]
 		},
@@ -1390,10 +1371,6 @@
 						}
 					}
 				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
 				"parameters": {
 					"ProcessName": {
 						"type": "string",
@@ -1404,7 +1381,6 @@
 				"lastPublishTime": "2021-09-14T09:17:37Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/SQLDB')]",
 				"[concat(variables('factoryId'), '/datasets/Metadata')]",
 				"[concat(variables('factoryId'), '/datasets/inputFile_gen')]",
 				"[concat(variables('factoryId'), '/pipelines/InnerPipeline')]",
@@ -1436,9 +1412,7 @@
 					}
 				}
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/SQLDB')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/inputFile_gen')]",
@@ -1471,9 +1445,7 @@
 				},
 				"schema": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/inputBlob')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/outputTable_gen')]",
@@ -1504,34 +1476,6 @@
 						"value": "@dataset().tableName",
 						"type": "Expression"
 					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/SQLDB')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SQLDB')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "AzureSqlDatabase",
-				"typeProperties": {
-					"connectionString": "[parameters('SQLDB_connectionString')]"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/inputBlob')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "AzureBlobStorage",
-				"typeProperties": {
-					"connectionString": "[parameters('inputBlob_connectionString')]"
 				}
 			},
 			"dependsOn": []
