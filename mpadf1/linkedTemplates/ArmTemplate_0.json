@@ -1084,7 +1084,7 @@
 							"source": {
 								"type": "AzureSqlSource",
 								"sqlReaderQuery": {
-									"value": "@{concat('SELECT DISTINCT Hierarchy FROM cfg.ProceduresList prcd JOIN cfg.ProcessesData prcs ON prcd.ProcessId = prcs.ProcessId WHERE ProcessName = ''', pipeline().parameters.ProcessName, ''' AND TableType = ''Dimension'' ORDER BY Hierarchy')}",
+									"value": "@{concat('SELECT DISTINCT Hierarchy FROM cfg.ProceduresList prcd JOIN cfg.ProcessesData prcs ON prcd.ProcessId = prcs.ProcessId WHERE ProcessName = ''', pipeline().parameters.ProcessName, ''' AND TableType = ''Dimension'' ORDER BY Hierarchy ASC')}",
 									"type": "Expression"
 								},
 								"queryTimeout": "02:00:00",
@@ -1140,6 +1140,41 @@
 												"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
 												"type": "Expression"
 											}
+										}
+									}
+								},
+								{
+									"name": "Break_copy1",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "Fill each dimension",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@variables('PipelineRunId')",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"headers": {},
+										"body": {
+											"message": "Cancelling the pipeline"
+										},
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://management.azure.com"
 										}
 									}
 								}
@@ -1319,6 +1354,11 @@
 					"ProcessName": {
 						"type": "string",
 						"defaultValue": "salesData"
+					}
+				},
+				"variables": {
+					"PipelineRunId": {
+						"type": "String"
 					}
 				},
 				"annotations": [],
