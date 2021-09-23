@@ -278,40 +278,6 @@
 						"type": "Expression"
 					}
 				}
-			},
-			{
-				"name": "Break_copy1",
-				"type": "WebActivity",
-				"dependsOn": [
-					{
-						"activity": "ForEachDim",
-						"dependencyConditions": [
-							"Failed"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "7.00:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"url": {
-						"value": "@variables('PipelineRunId')",
-						"type": "Expression"
-					},
-					"method": "POST",
-					"body": {
-						"message": "Cancelling the pipeline"
-					},
-					"authentication": {
-						"type": "MSI",
-						"resource": "https://management.azure.com"
-					}
-				}
 			}
 		],
 		"parameters": {
