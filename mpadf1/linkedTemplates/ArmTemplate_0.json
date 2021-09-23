@@ -1117,7 +1117,7 @@
 								"value": "@activity('Lookup for Hierarchy').output.value",
 								"type": "Expression"
 							},
-							"isSequential": false,
+							"isSequential": true,
 							"activities": [
 								{
 									"name": "Fill each dimension",
