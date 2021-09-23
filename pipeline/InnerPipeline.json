@@ -5,7 +5,14 @@
 			{
 				"name": "Lookup for dim or fact",
 				"type": "Lookup",
-				"dependsOn": [],
+				"dependsOn": [
+					{
+						"activity": "Set PipelineRunId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
 				"policy": {
 					"timeout": "7.00:00:00",
 					"retry": 0,
@@ -149,6 +156,13 @@
 											"type": "Expression"
 										},
 										"type": "Int32"
+									},
+									"TableLoad_ID": {
+										"value": {
+											"value": "@{concat(activity('DimProcedure').output.firstRow['TableLoad_ID'])}",
+											"type": "Expression"
+										},
+										"type": "Int32"
 									}
 								}
 							},
@@ -176,8 +190,8 @@
 								},
 								"ifTrueActivities": [
 									{
-										"name": "Force error",
-										"type": "Lookup",
+										"name": "Break",
+										"type": "WebActivity",
 										"dependsOn": [],
 										"policy": {
 											"timeout": "7.00:00:00",
@@ -188,21 +202,17 @@
 										},
 										"userProperties": [],
 										"typeProperties": {
-											"source": {
-												"type": "AzureSqlSource",
-												"sqlReaderQuery": {
-													"value": "@{concat('SELECT * FROM NonExisting--', item().TableName)}",
-													"type": "Expression"
-												},
-												"queryTimeout": "02:00:00",
-												"partitionOption": "None"
+											"url": {
+												"value": "@variables('PipelineRunId')",
+												"type": "Expression"
 											},
-											"dataset": {
-												"referenceName": "Metadata",
-												"type": "DatasetReference",
-												"parameters": {
-													"tableName": "dummy"
-												}
+											"method": "POST",
+											"body": {
+												"message": "Cancelling the pipeline"
+											},
+											"authentication": {
+												"type": "MSI",
+												"resource": "https://management.azure.com"
 											}
 										}
 									}
@@ -255,6 +265,19 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "Set PipelineRunId",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineRunId",
+					"value": {
+						"value": "@concat('https://management.azure.com/subscriptions/2bcb9f3d-3f6b-4a90-a49e-86d3141c7f73/resourceGroups/Lingaro_magdalenapietras_2109230704_e684b/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/pipelineruns/',pipeline().RunId,'/cancel?api-version=2018-06-01')",
+						"type": "Expression"
+					}
+				}
 			}
 		],
 		"parameters": {
@@ -269,8 +292,8 @@
 			}
 		},
 		"variables": {
-			"error": {
-				"type": "Boolean"
+			"PipelineRunId": {
+				"type": "String"
 			}
 		},
 		"annotations": [],

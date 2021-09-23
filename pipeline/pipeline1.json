@@ -118,6 +118,37 @@
 					"referenceName": "SQLDB",
 					"type": "LinkedServiceReference"
 				}
+			},
+			{
+				"name": "Force error",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@{concat('SELECT * FROM NonExisting--', item().TableName)}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Metadata",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dummy"
+						}
+					}
+				}
 			}
 		],
 		"annotations": []
