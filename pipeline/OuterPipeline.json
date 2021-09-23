@@ -889,6 +889,11 @@
 				"defaultValue": "salesData"
 			}
 		},
+		"variables": {
+			"PipelineRunId": {
+				"type": "String"
+			}
+		},
 		"annotations": [],
 		"lastPublishTime": "2021-09-14T09:17:37Z"
 	}
