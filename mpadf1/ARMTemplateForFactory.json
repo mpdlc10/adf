@@ -1325,7 +1325,8 @@
 							{
 								"activity": "ForEachDim",
 								"dependencyConditions": [
-									"Failed"
+									"Failed",
+									"Skipped"
 								]
 							}
 						],
