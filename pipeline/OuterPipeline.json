@@ -537,6 +537,91 @@
 									}
 								}
 							}
+						},
+						{
+							"name": "Log FactError",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Fill each fact_copy1",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[lg].[Log_ExecMessages]",
+								"storedProcedureParameters": {
+									"ExecMessage": {
+										"value": "Error during loading fact tables. Pipeline stopped.",
+										"type": "String"
+									},
+									"PipelineRunID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ExecutionID": {
+										"value": {
+											"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"ErrorID": {
+										"value": null,
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SQLDB",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Break outer_copy1",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Log FactError",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://management.azure.com/subscriptions/2bcb9f3d-3f6b-4a90-a49e-86d3141c7f73/resourceGroups/Lingaro_magdalenapietras_2109240601_49194/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory,'/pipelineruns/',pipeline().RunId,'/cancel?api-version=2018-06-01')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"body": {
+									"message": "Cancelling outer pipeline"
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://management.azure.com"
+								}
+							}
 						}
 					]
 				}
@@ -821,57 +906,6 @@
 							"type": "Int32"
 						},
 						"TableLoad_ID": {
-							"value": null,
-							"type": "Int32"
-						}
-					}
-				},
-				"linkedServiceName": {
-					"referenceName": "SQLDB",
-					"type": "LinkedServiceReference"
-				}
-			},
-			{
-				"name": "Log FactError",
-				"type": "SqlServerStoredProcedure",
-				"dependsOn": [
-					{
-						"activity": "ForEachFact",
-						"dependencyConditions": [
-							"Failed"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "7.00:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"storedProcedureName": "[lg].[Log_ExecMessages]",
-					"storedProcedureParameters": {
-						"ExecMessage": {
-							"value": "Error during loading fact tables. Pipeline stopped.",
-							"type": "String"
-						},
-						"PipelineRunID": {
-							"value": {
-								"value": "@pipeline().RunId",
-								"type": "Expression"
-							},
-							"type": "String"
-						},
-						"ExecutionID": {
-							"value": {
-								"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-								"type": "Expression"
-							},
-							"type": "Int32"
-						},
-						"ErrorID": {
 							"value": null,
 							"type": "Int32"
 						}
