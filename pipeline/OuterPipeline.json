@@ -686,9 +686,9 @@
 							"type": "WebActivity",
 							"dependsOn": [
 								{
-									"activity": "Fill each dimension",
+									"activity": "Log DimError",
 									"dependencyConditions": [
-										"Failed"
+										"Succeeded"
 									]
 								}
 							],
@@ -713,6 +713,61 @@
 									"type": "MSI",
 									"resource": "https://management.azure.com"
 								}
+							}
+						},
+						{
+							"name": "Log DimError",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Fill each dimension",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[lg].[Log_ExecMessages]",
+								"storedProcedureParameters": {
+									"ExecMessage": {
+										"value": "Error during loading dimension tables. Pipeline stopped.",
+										"type": "String"
+									},
+									"PipelineRunID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ExecutionID": {
+										"value": {
+											"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"ErrorID": {
+										"value": null,
+										"type": "Int32"
+									},
+									"TableLoad_ID": {
+										"value": null,
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SQLDB",
+								"type": "LinkedServiceReference"
 							}
 						}
 					]
@@ -745,62 +800,6 @@
 								"value": "@{concat('Dimension tables hierarchy levels: ', activity('Lookup for Hierarchy').output.count)}",
 								"type": "Expression"
 							},
-							"type": "String"
-						},
-						"PipelineRunID": {
-							"value": {
-								"value": "@pipeline().RunId",
-								"type": "Expression"
-							},
-							"type": "String"
-						},
-						"ExecutionID": {
-							"value": {
-								"value": "@activity('Log PipelineExecParam').output.firstRow['ExecutionID']",
-								"type": "Expression"
-							},
-							"type": "Int32"
-						},
-						"ErrorID": {
-							"value": null,
-							"type": "Int32"
-						},
-						"TableLoad_ID": {
-							"value": null,
-							"type": "Int32"
-						}
-					}
-				},
-				"linkedServiceName": {
-					"referenceName": "SQLDB",
-					"type": "LinkedServiceReference"
-				}
-			},
-			{
-				"name": "Log DimError",
-				"type": "SqlServerStoredProcedure",
-				"dependsOn": [
-					{
-						"activity": "ForEachDim",
-						"dependencyConditions": [
-							"Failed",
-							"Skipped"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "7.00:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"storedProcedureName": "[lg].[Log_ExecMessages]",
-					"storedProcedureParameters": {
-						"ExecMessage": {
-							"value": "Error during loading dimension tables. Pipeline stopped.",
 							"type": "String"
 						},
 						"PipelineRunID": {
